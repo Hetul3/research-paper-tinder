@@ -100,17 +100,14 @@ describe("paper preferences", () => {
     ]);
   });
 
-  it("cycles the oldest seen paper after every eligible paper has been seen", () => {
+  it("stops at the end of a batch instead of recycling seen papers", () => {
     const first = paper("first", "cs.AI", "2026-08-27");
     const second = paper("second", "cs.AI", "2026-08-26");
     let preferences = createInitialPreferences(["cs.AI"]);
     preferences = applyDecision(preferences, first, "skipped");
     preferences = applyDecision(preferences, second, "skipped");
 
-    expect(buildDeck([first, second], preferences)[0].id).toBe("first");
-
-    preferences = applyDecision(preferences, first, "skipped");
-    expect(buildDeck([first, second], preferences)[0].id).toBe("second");
+    expect(buildDeck([first, second], preferences)).toEqual([]);
   });
 
   it("filters the continuous deck by publication timeframe", () => {
