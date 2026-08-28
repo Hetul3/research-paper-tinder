@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #121715;
+  --foreground: #f5efe5;
 }
 
 @theme inline {
@@ -10,17 +10,92 @@
   --color-foreground: var(--foreground);
   --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+  --font-serif: Iowan Old Style, Baskerville, "Times New Roman", serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--background);
 }
 
 body {
+  min-width: 320px;
   background: var(--background);
   color: var(--foreground);
   font-family: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:not(:disabled),
+a {
+  cursor: pointer;
+}
+
+::selection {
+  background: #d45532;
+  color: white;
+}
+
+.ambient-glow {
+  background:
+    radial-gradient(circle at 18% 20%, rgb(49 79 70 / 28%), transparent 30rem),
+    radial-gradient(circle at 82% 70%, rgb(161 68 43 / 12%), transparent 28rem),
+    linear-gradient(115deg, transparent 0 49.85%, rgb(255 255 255 / 3%) 50%, transparent 50.15%);
+}
+
+.ambient-glow::after {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgb(255 255 255 / 8%) 0.55px, transparent 0.55px);
+  background-size: 7px 7px;
+  content: "";
+  opacity: 0.12;
+}
+
+.paper-grid {
+  background-image:
+    linear-gradient(rgb(23 23 19 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(23 23 19 / 4%) 1px, transparent 1px);
+  background-position: -1px -1px;
+  background-size: 24px 24px;
+  mask-image: linear-gradient(to bottom, black, transparent 72%);
+}
+
+.paper-card::after {
+  position: absolute;
+  right: -4.5rem;
+  bottom: -5.5rem;
+  z-index: -1;
+  width: 15rem;
+  height: 15rem;
+  border: 1px solid rgb(23 23 19 / 8%);
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 2.5rem rgb(23 23 19 / 2.5%),
+    0 0 0 5rem rgb(23 23 19 / 1.5%);
+  content: "";
+}
+
+@media (max-width: 639px) {
+  .paper-card {
+    border-radius: 1.55rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
