@@ -8,7 +8,7 @@ import {
   Settings2,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { PaperCard } from "@/components/paper-card";
 import { SavedLibrary } from "@/components/saved-library";
@@ -66,6 +66,7 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
   const [view, setView] = useState<"discover" | "saved">("discover");
   const [additionalPapers, setAdditionalPapers] = useState<Paper[]>([]);
   const [batchAttempted, setBatchAttempted] = useState(false);
+  const batchAttemptedRef = useRef(false);
   const nextBatchStart = useMemo(() => 150 + additionalPapers.length, [additionalPapers.length]);
   const allPapers = useMemo(() => {
     const byId = new Map<string, Paper>();
@@ -123,10 +124,13 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
   }
 
   useEffect(() => {
-    if (view !== "discover" || currentPaper || batchAttempted || visiblePreferences.decisions.length === 0) return;
+    if (view !== "discover" || currentPaper || batchAttemptedRef.current || visiblePreferences.decisions.length === 0) return;
     let cancelled = false;
     queueMicrotask(() => {
-      if (!cancelled) setBatchAttempted(true);
+      if (!cancelled) {
+        batchAttemptedRef.current = true;
+        setBatchAttempted(true);
+      }
     });
     fetch(`/api/papers?start=${nextBatchStart}`)
       .then(async (response) => {
@@ -137,12 +141,13 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
         if (cancelled) return;
         if (result.papers?.length) {
           setAdditionalPapers((current) => [...current, ...result.papers!]);
+          batchAttemptedRef.current = false;
           setBatchAttempted(false);
         }
       })
       .catch(() => undefined)
     return () => { cancelled = true; };
-  }, [batchAttempted, currentPaper, nextBatchStart, view, visiblePreferences.decisions.length]);
+  }, [currentPaper, nextBatchStart, view, visiblePreferences.decisions.length]);
 
   const loadingMore = !currentPaper && batchAttempted && visiblePreferences.decisions.length > 0;
 

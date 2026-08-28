@@ -207,4 +207,18 @@ describe("DiscoveryApp", () => {
     expect(screen.getByRole("heading", { name: papers[1].title })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Saved papers, 0" })).toBeInTheDocument();
   });
+
+  it("loads and displays another batch after the current deck is exhausted", async () => {
+    const user = userEvent.setup();
+    const nextPaper = { ...papers[0], id: "2608.10003", versionedId: "2608.10003v1", title: "A Newly Loaded Paper" };
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify({ papers: [nextPaper] }), { status: 200 }),
+    );
+    render(<DiscoveryApp generatedAt="2026-08-27T12:00:00Z" papers={papers} />);
+
+    await user.click(screen.getByRole("button", { name: "Skip paper" }));
+    await user.click(screen.getByRole("button", { name: "Skip paper" }));
+
+    expect(await screen.findByRole("heading", { name: nextPaper.title })).toBeInTheDocument();
+  });
 });
