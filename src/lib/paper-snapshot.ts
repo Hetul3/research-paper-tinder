@@ -14,7 +14,7 @@ function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string");
 }
 
-function isPaper(value: unknown): value is Paper {
+export function isPaperRecord(value: unknown): value is Paper {
   if (!value || typeof value !== "object") return false;
 
   const paper = value as Partial<Paper>;
@@ -48,7 +48,7 @@ export function isPaperSnapshot(value: unknown): value is PaperSnapshot {
     !Number.isNaN(Date.parse(snapshot.generatedAt)) &&
     Array.isArray(snapshot.papers) &&
     snapshot.papers.length > 0 &&
-    snapshot.papers.every(isPaper)
+    snapshot.papers.every(isPaperRecord)
   );
 }
 

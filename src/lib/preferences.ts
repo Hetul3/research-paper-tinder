@@ -1,4 +1,5 @@
 import { AI_CATEGORIES, type Paper } from "@/lib/arxiv";
+import { isPaperRecord } from "@/lib/paper-snapshot";
 
 export type PaperDecisionKind = "saved" | "skipped" | "read";
 
@@ -13,6 +14,7 @@ export interface Preferences {
   version: 1;
   selectedCategories: string[];
   decisions: PaperDecision[];
+  savedPapers: Paper[];
 }
 
 export function createInitialPreferences(
@@ -22,6 +24,7 @@ export function createInitialPreferences(
     version: 1,
     selectedCategories: [...selectedCategories],
     decisions: [],
+    savedPapers: [],
   };
 }
 
@@ -32,6 +35,9 @@ export function applyDecision(
 ): Preferences {
   const previousDecisions = preferences.decisions.filter(
     (decision) => decision.paperId !== paper.id,
+  );
+  const previousSavedPapers = preferences.savedPapers.filter(
+    (savedPaper) => savedPaper.id !== paper.id,
   );
 
   return {
@@ -45,15 +51,25 @@ export function applyDecision(
         decidedAt: new Date().toISOString(),
       },
     ],
+    savedPapers:
+      kind === "saved" ? [...previousSavedPapers, paper] : previousSavedPapers,
   };
 }
 
 export function undoLastDecision(preferences: Preferences): Preferences {
   if (preferences.decisions.length === 0) return preferences;
 
+  const lastDecision = preferences.decisions.at(-1);
+
   return {
     ...preferences,
     decisions: preferences.decisions.slice(0, -1),
+    savedPapers:
+      lastDecision?.kind === "saved"
+        ? preferences.savedPapers.filter(
+            (paper) => paper.id !== lastDecision.paperId,
+          )
+        : preferences.savedPapers,
   };
 }
 
@@ -139,6 +155,9 @@ export function parseStoredPreferences(value: string | null): Preferences {
         Array.isArray(decision.categories) &&
         typeof decision.decidedAt === "string",
     );
+    const savedPapers = Array.isArray(parsed.savedPapers)
+      ? parsed.savedPapers.filter(isPaperRecord)
+      : [];
 
     return {
       version: 1,
@@ -147,6 +166,7 @@ export function parseStoredPreferences(value: string | null): Preferences {
           ? selectedCategories
           : [...AI_CATEGORIES],
       decisions,
+      savedPapers,
     };
   } catch {
     return createInitialPreferences();

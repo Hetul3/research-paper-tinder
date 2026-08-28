@@ -78,8 +78,16 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
     [visiblePreferences],
   );
   const savedPapers = useMemo(
-    () => papers.filter((paper) => savedIds.has(paper.id)),
-    [papers, savedIds],
+    () => {
+      const durablePapers = new Map(
+        visiblePreferences.savedPapers.map((paper) => [paper.id, paper]),
+      );
+      for (const paper of papers) {
+        if (savedIds.has(paper.id)) durablePapers.set(paper.id, paper);
+      }
+      return [...durablePapers.values()].filter((paper) => savedIds.has(paper.id));
+    },
+    [papers, savedIds, visiblePreferences.savedPapers],
   );
 
   function decide(kind: PaperDecisionKind) {
