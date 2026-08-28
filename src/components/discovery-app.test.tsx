@@ -113,4 +113,34 @@ describe("DiscoveryApp", () => {
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Saved papers, 1" })).toBeInTheDocument();
   });
+
+  it("lets the reader tune the deck to selected research topics", async () => {
+    const user = userEvent.setup();
+    render(<DiscoveryApp generatedAt="2026-08-27T12:00:00Z" papers={papers} />);
+
+    await user.click(screen.getByRole("button", { name: "Tune topics" }));
+    expect(
+      screen.getByRole("dialog", { name: "Tune your topics" }),
+    ).toBeInTheDocument();
+
+    for (const topic of [
+      "Artificial intelligence",
+      "Machine learning",
+      "Language",
+      "Robotics",
+      "Multi-agent systems",
+      "Neural systems",
+      "Statistical ML",
+    ]) {
+      await user.click(screen.getByRole("checkbox", { name: topic }));
+    }
+    await user.click(screen.getByRole("button", { name: "Done" }));
+
+    expect(
+      screen.getByRole("heading", { name: papers[1].title }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: papers[0].title }),
+    ).not.toBeInTheDocument();
+  });
 });
