@@ -114,6 +114,33 @@ describe("DiscoveryApp", () => {
     expect(screen.getByRole("button", { name: "Saved papers, 1" })).toBeInTheDocument();
   });
 
+  it("keeps saved papers visible after they rotate out of the feed", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem(
+      "margin-paper-preferences-v1",
+      JSON.stringify({
+        version: 1,
+        selectedCategories: ["cs.AI"],
+        decisions: [
+          {
+            paperId: papers[0].id,
+            kind: "saved",
+            categories: papers[0].categories,
+            decidedAt: "2026-08-27T12:00:00Z",
+          },
+        ],
+        savedPapers: [papers[0]],
+      }),
+    );
+
+    render(<DiscoveryApp generatedAt="2026-08-28T12:00:00Z" papers={[]} />);
+
+    await user.click(screen.getByRole("button", { name: "Saved papers, 1" }));
+    expect(
+      screen.getByRole("heading", { name: papers[0].title }),
+    ).toBeInTheDocument();
+  });
+
   it("lets the reader tune the deck to selected research topics", async () => {
     const user = userEvent.setup();
     render(<DiscoveryApp generatedAt="2026-08-27T12:00:00Z" papers={papers} />);

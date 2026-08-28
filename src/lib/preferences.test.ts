@@ -62,6 +62,19 @@ describe("paper preferences", () => {
     expect(getDecisionIds(undone, "skipped")).toEqual([]);
   });
 
+  it("keeps a saved paper snapshot after it leaves the daily feed", () => {
+    const savedPaper = paper("lasting", "cs.AI", "2026-08-26");
+    const preferences = applyDecision(
+      createInitialPreferences(),
+      savedPaper,
+      "saved",
+    );
+
+    expect(preferences.savedPapers).toEqual([savedPaper]);
+    expect(buildDeck([], preferences)).toEqual([]);
+    expect(preferences.savedPapers[0].title).toBe("Paper lasting");
+  });
+
   it("builds an unseen category-filtered deck and favors saved topics", () => {
     const language = paper("language", "cs.CL", "2026-08-20");
     const recentVision = paper("vision", "cs.CV", "2026-08-27");
