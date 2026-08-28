@@ -40,13 +40,21 @@ describe("PaperCard gestures", () => {
 
   it("saves on a committed right swipe and snaps back below threshold", () => {
     const onDecision = vi.fn();
-    render(<PaperCard onDecision={onDecision} paper={paper} />);
+    const onRightSwipe = vi.fn();
+    render(
+      <PaperCard
+        onDecision={onDecision}
+        onRightSwipe={onRightSwipe}
+        paper={paper}
+      />,
+    );
     const card = screen.getByRole("article");
 
     fireEvent.pointerDown(card, { clientX: 100, pointerId: 1 });
     fireEvent.pointerMove(card, { clientX: 230, pointerId: 1 });
     fireEvent.pointerUp(card, { clientX: 230, pointerId: 1 });
-    expect(onDecision).toHaveBeenCalledWith("saved");
+    expect(onRightSwipe).toHaveBeenCalledOnce();
+    expect(onDecision).not.toHaveBeenCalled();
 
     onDecision.mockClear();
     fireEvent.pointerDown(card, { clientX: 100, pointerId: 2 });

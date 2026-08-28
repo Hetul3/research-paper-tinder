@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DiscoveryApp } from "@/components/discovery-app";
 import type { Paper } from "@/lib/arxiv";
@@ -185,5 +185,24 @@ describe("DiscoveryApp", () => {
     await user.click(screen.getByRole("button", { name: "Done" }));
 
     expect(screen.getByRole("button", { name: /30 days/ })).toBeInTheDocument();
+  });
+
+  it("opens the direct PDF and advances without saving on a right swipe", () => {
+    const openWindow = vi.spyOn(window, "open").mockImplementation(() => null);
+    render(<DiscoveryApp generatedAt="2026-08-27T12:00:00Z" papers={papers} />);
+    const card = screen.getByRole("article");
+
+    fireEvent.pointerDown(card, { clientX: 100, pointerId: 1 });
+    fireEvent.pointerMove(card, { clientX: 240, pointerId: 1 });
+    fireEvent.pointerUp(card, { clientX: 240, pointerId: 1 });
+
+    expect(openWindow).toHaveBeenCalledWith(
+      papers[0].pdfUrl,
+      "_blank",
+      "noopener,noreferrer",
+    );
+    expect(screen.getByRole("heading", { name: papers[1].title })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Saved papers, 0" })).toBeInTheDocument();
+    openWindow.mockRestore();
   });
 });
