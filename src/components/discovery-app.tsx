@@ -67,6 +67,7 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
   const [additionalPapers, setAdditionalPapers] = useState<Paper[]>([]);
   const [batchAttempted, setBatchAttempted] = useState(false);
   const batchAttemptedRef = useRef(false);
+  const [sessionSeed] = useState(() => Math.random());
   const nextBatchStart = useMemo(() => 150 + additionalPapers.length, [additionalPapers.length]);
   const allPapers = useMemo(() => {
     const byId = new Map<string, Paper>();
@@ -87,8 +88,17 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
   }, [hydrated, preferences]);
 
   const deck = useMemo(
-    () => buildDeck(allPapers, visiblePreferences),
-    [allPapers, visiblePreferences],
+    () => {
+      const score = (id: string) => {
+        let value = Math.floor(sessionSeed * 2147483647);
+        for (const character of id) value = (value * 31 + character.charCodeAt(0)) | 0;
+        return value;
+      };
+      return buildDeck(allPapers, visiblePreferences).sort(
+        (left, right) => score(left.id) - score(right.id),
+      );
+    },
+    [allPapers, sessionSeed, visiblePreferences],
   );
   const currentPaper = deck[0];
   const savedIds = useMemo(
@@ -124,7 +134,7 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
   }
 
   useEffect(() => {
-    if (view !== "discover" || currentPaper || batchAttemptedRef.current || visiblePreferences.decisions.length === 0) return;
+    if (view !== "discover" || currentPaper || batchAttemptedRef.current) return;
     let cancelled = false;
     queueMicrotask(() => {
       if (!cancelled) {
@@ -149,7 +159,7 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
     return () => { cancelled = true; };
   }, [currentPaper, nextBatchStart, view, visiblePreferences.decisions.length]);
 
-  const loadingMore = !currentPaper && batchAttempted && visiblePreferences.decisions.length > 0;
+  const loadingMore = !currentPaper && batchAttempted;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
