@@ -98,7 +98,7 @@ export function PaperCard({ paper, onDecision, onRightSwipe }: PaperCardProps) {
           dragX > 45 ? "bg-[#d95d39]/90 text-white opacity-100" : "opacity-0"
         }`}
       >
-        Save
+        Open PDF
       </div>
       <div
         aria-hidden="true"

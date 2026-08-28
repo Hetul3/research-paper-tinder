@@ -1,9 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DiscoveryApp } from "@/components/discovery-app";
 import type { Paper } from "@/lib/arxiv";
+import { navigateToPdf } from "@/lib/pdf-navigation";
+
+vi.mock("@/lib/pdf-navigation", () => ({ navigateToPdf: vi.fn() }));
 
 const papers: Paper[] = [
   {
@@ -47,7 +50,12 @@ const papers: Paper[] = [
 describe("DiscoveryApp", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ papers: [] }), { status: 200 }),
+    );
   });
+
+  afterEach(() => vi.restoreAllMocks());
 
   it("lets a reader save, skip, undo, and browse the saved library", async () => {
     const user = userEvent.setup();
@@ -65,7 +73,7 @@ describe("DiscoveryApp", () => {
 
     await user.click(screen.getByRole("button", { name: "Skip paper" }));
     expect(
-      screen.getByRole("heading", { name: "You’re caught up for now" }),
+      await screen.findByRole("heading", { name: "Finding more papers" }),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Undo last choice" }));
@@ -187,8 +195,7 @@ describe("DiscoveryApp", () => {
     expect(screen.getByRole("button", { name: /30 days/ })).toBeInTheDocument();
   });
 
-  it("opens the direct PDF and advances without saving on a right swipe", () => {
-    const openWindow = vi.spyOn(window, "open").mockImplementation(() => null);
+  it("redirects to the direct PDF and advances without saving on a right swipe", () => {
     render(<DiscoveryApp generatedAt="2026-08-27T12:00:00Z" papers={papers} />);
     const card = screen.getByRole("article");
 
@@ -196,13 +203,8 @@ describe("DiscoveryApp", () => {
     fireEvent.pointerMove(card, { clientX: 240, pointerId: 1 });
     fireEvent.pointerUp(card, { clientX: 240, pointerId: 1 });
 
-    expect(openWindow).toHaveBeenCalledWith(
-      papers[0].pdfUrl,
-      "_blank",
-      "noopener,noreferrer",
-    );
+    expect(navigateToPdf).toHaveBeenCalledWith(papers[0].pdfUrl);
     expect(screen.getByRole("heading", { name: papers[1].title })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Saved papers, 0" })).toBeInTheDocument();
-    openWindow.mockRestore();
   });
 });

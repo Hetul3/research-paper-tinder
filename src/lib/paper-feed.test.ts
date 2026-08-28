@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { AI_CATEGORIES } from "@/lib/arxiv";
-import { refreshPaperSnapshot } from "@/lib/paper-feed";
+import { fetchPaperBatch, refreshPaperSnapshot } from "@/lib/paper-feed";
 
 const FEED = `<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom" xmlns:arxiv="http://arxiv.org/schemas/atom">
@@ -30,6 +30,12 @@ const FEED = `<?xml version="1.0" encoding="UTF-8"?>
 </feed>`;
 
 describe("refreshPaperSnapshot", () => {
+  it("fetches a later batch when given an offset", async () => {
+    const fetchArxiv = vi.fn().mockResolvedValue(new Response(FEED, { status: 200 }));
+    const papers = await fetchPaperBatch({ start: 150, fetchArxiv });
+    expect(new URL(fetchArxiv.mock.calls[0][0]).searchParams.get("start")).toBe("150");
+    expect(papers).toHaveLength(1);
+  });
   it("fetches one broad batch, deduplicates it, and writes a snapshot", async () => {
     const fetchArxiv = vi.fn().mockResolvedValue(
       new Response(FEED, {

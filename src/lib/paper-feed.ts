@@ -12,6 +12,12 @@ interface RefreshPaperSnapshotOptions {
   writeSnapshot: (snapshot: PaperSnapshot) => Promise<void>;
 }
 
+interface FetchPaperBatchOptions {
+  start?: number;
+  maxResults?: number;
+  fetchArxiv?: typeof fetch;
+}
+
 function deduplicatePapers(papers: Paper[]): Paper[] {
   const byId = new Map<string, Paper>();
 
@@ -25,26 +31,33 @@ function deduplicatePapers(papers: Paper[]): Paper[] {
   return [...byId.values()];
 }
 
+export async function fetchPaperBatch({
+  start = 0,
+  maxResults = 150,
+  fetchArxiv = fetch,
+}: FetchPaperBatchOptions = {}): Promise<Paper[]> {
+  const response = await fetchArxiv(
+    buildArxivQueryUrl(AI_CATEGORIES, maxResults, start),
+    {
+      cache: "no-store",
+      headers: {
+        Accept: "application/atom+xml, application/xml;q=0.9, text/xml;q=0.8",
+      },
+    },
+  );
+
+  if (!response.ok) throw new Error(`arXiv returned ${response.status}.`);
+  const papers = deduplicatePapers(parseArxivFeed(await response.text()));
+  if (papers.length === 0) throw new Error("arXiv returned no usable papers.");
+  return papers;
+}
+
 export async function refreshPaperSnapshot({
   fetchArxiv = fetch,
   now = () => new Date(),
   writeSnapshot,
 }: RefreshPaperSnapshotOptions): Promise<PaperSnapshot> {
-  const response = await fetchArxiv(buildArxivQueryUrl(AI_CATEGORIES, 150), {
-    cache: "no-store",
-    headers: {
-      Accept: "application/atom+xml, application/xml;q=0.9, text/xml;q=0.8",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`arXiv returned ${response.status}.`);
-  }
-
-  const papers = deduplicatePapers(parseArxivFeed(await response.text()));
-  if (papers.length === 0) {
-    throw new Error("arXiv returned no usable papers.");
-  }
+  const papers = await fetchPaperBatch({ fetchArxiv, maxResults: 150 });
 
   const snapshot: PaperSnapshot = {
     generatedAt: now().toISOString(),

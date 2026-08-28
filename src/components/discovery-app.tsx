@@ -14,6 +14,7 @@ import { PaperCard } from "@/components/paper-card";
 import { SavedLibrary } from "@/components/saved-library";
 import { TopicFilter } from "@/components/topic-filter";
 import type { Paper } from "@/lib/arxiv";
+import { navigateToPdf } from "@/lib/pdf-navigation";
 import {
   applyDecision,
   buildDeck,
@@ -63,6 +64,14 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
       : parseStoredPreferences(window.localStorage.getItem(STORAGE_KEY)),
   );
   const [view, setView] = useState<"discover" | "saved">("discover");
+  const [additionalPapers, setAdditionalPapers] = useState<Paper[]>([]);
+  const [batchAttempted, setBatchAttempted] = useState(false);
+  const nextBatchStart = useMemo(() => 150 + additionalPapers.length, [additionalPapers.length]);
+  const allPapers = useMemo(() => {
+    const byId = new Map<string, Paper>();
+    for (const paper of [...papers, ...additionalPapers]) byId.set(paper.id, paper);
+    return [...byId.values()];
+  }, [additionalPapers, papers]);
   const [topicFilterOpen, setTopicFilterOpen] = useState(false);
   const hydrated = useSyncExternalStore(
     subscribeToHydration,
@@ -77,8 +86,8 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
   }, [hydrated, preferences]);
 
   const deck = useMemo(
-    () => buildDeck(papers, visiblePreferences),
-    [papers, visiblePreferences],
+    () => buildDeck(allPapers, visiblePreferences),
+    [allPapers, visiblePreferences],
   );
   const currentPaper = deck[0];
   const savedIds = useMemo(
@@ -90,12 +99,12 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
       const durablePapers = new Map(
         visiblePreferences.savedPapers.map((paper) => [paper.id, paper]),
       );
-      for (const paper of papers) {
+      for (const paper of allPapers) {
         if (savedIds.has(paper.id)) durablePapers.set(paper.id, paper);
       }
       return [...durablePapers.values()].filter((paper) => savedIds.has(paper.id));
     },
-    [papers, savedIds, visiblePreferences.savedPapers],
+    [allPapers, savedIds, visiblePreferences.savedPapers],
   );
 
   function decide(kind: PaperDecisionKind) {
@@ -109,9 +118,33 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
 
   function openPdfAndAdvance() {
     if (!currentPaper) return;
-    window.open(currentPaper.pdfUrl, "_blank", "noopener,noreferrer");
     setPreferences((current) => applyDecision(current, currentPaper, "read"));
+    navigateToPdf(currentPaper.pdfUrl);
   }
+
+  useEffect(() => {
+    if (view !== "discover" || currentPaper || batchAttempted || visiblePreferences.decisions.length === 0) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setBatchAttempted(true);
+    });
+    fetch(`/api/papers?start=${nextBatchStart}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Unable to load more papers.");
+        return (await response.json()) as { papers?: Paper[] };
+      })
+      .then((result) => {
+        if (cancelled) return;
+        if (result.papers?.length) {
+          setAdditionalPapers((current) => [...current, ...result.papers!]);
+          setBatchAttempted(false);
+        }
+      })
+      .catch(() => undefined)
+    return () => { cancelled = true; };
+  }, [batchAttempted, currentPaper, nextBatchStart, view, visiblePreferences.decisions.length]);
+
+  const loadingMore = !currentPaper && batchAttempted && visiblePreferences.decisions.length > 0;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -131,14 +164,6 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   });
-
-  const seenCount = visiblePreferences.decisions.length;
-  const totalCount = papers.filter((paper) =>
-    paper.categories.some((category) =>
-      visiblePreferences.selectedCategories.includes(category),
-    ),
-  ).length;
-  const progress = totalCount === 0 ? 0 : Math.min(100, (seenCount / totalCount) * 100);
 
   return (
     <div className="relative min-h-dvh overflow-hidden bg-[#121715] text-[#f5efe5]">
@@ -225,20 +250,6 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
                 rest, and stop whenever you’re done.
               </p>
 
-              <div className="mt-9 max-w-xs">
-                <div className="flex items-center justify-between font-mono text-[0.62rem] uppercase tracking-[0.12em] text-white/35">
-                  <span>Session</span>
-                  <span>
-                    {seenCount} / {totalCount}
-                  </span>
-                </div>
-                <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-[#e56b47] transition-[width] duration-300"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              </div>
             </aside>
 
             <section aria-label="Paper discovery" className="mx-auto w-full max-w-[31rem]">
@@ -256,11 +267,12 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
                       <Compass aria-hidden="true" size={23} />
                     </span>
                     <h1 className="mt-5 font-serif text-4xl font-semibold tracking-[-0.04em]">
-                      You’re caught up for now
+                      {loadingMore ? "Finding more papers" : "You’re caught up for now"}
                     </h1>
                     <p className="mt-3 text-sm leading-6 text-white/50">
-                      No repeats here. New papers arrive with the next daily
-                      refresh, or broaden your focus and timeframe to continue.
+                      {loadingMore
+                        ? "Loading another batch from arXiv…"
+                        : "No repeats here. Try broadening your focus or timeframe to continue."}
                     </p>
                     {visiblePreferences.decisions.length > 0 ? (
                       <button

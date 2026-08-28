@@ -4,7 +4,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "margin — a quieter way into AI research",
   description:
-    "Discover a finite stack of AI research papers, save what sparks your curiosity, and stop when you are done.",
+    "Discover AI research one paper at a time, save what sparks your curiosity, and keep learning without doomscrolling.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -1,6 +1,6 @@
 # margin
 
-A quiet, mobile-first way to discover AI research. Read one author abstract at a time, save what sparks your curiosity, skip what does not, and reach a real end to today's batch instead of an infinite recycled feed.
+A quiet, mobile-first way to discover AI research. Read one abstract at a time, save what sparks your curiosity, skip what does not, and keep loading fresh batches instead of recycling papers.
 
 The MVP is intentionally free and accountless:
 
@@ -9,7 +9,8 @@ The MVP is intentionally free and accountless:
 - no database for reader data;
 - decisions, topic choices, and durable saved-paper metadata stay in the browser;
 - a checked-in starter snapshot makes the app work with no environment variables;
-- optional Vercel Blob storage and one daily cron keep deployed metadata fresh.
+- optional Vercel Blob storage and one daily cron keep deployed metadata fresh;
+- the on-demand endpoint loads another 150-paper batch as the deck empties.
 
 ## Run locally
 

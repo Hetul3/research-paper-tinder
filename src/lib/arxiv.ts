@@ -174,6 +174,7 @@ export function parseArxivFeed(xml: string): Paper[] {
 export function buildArxivQueryUrl(
   categories: readonly string[],
   maxResults = 150,
+  start = 0,
 ): string {
   const safeCategories = categories.filter((category) =>
     /^[a-z-]+\.[A-Za-z-]+$/.test(category),
@@ -188,7 +189,7 @@ export function buildArxivQueryUrl(
     "search_query",
     `(${safeCategories.map((category) => `cat:${category}`).join(" OR ")})`,
   );
-  url.searchParams.set("start", "0");
+  url.searchParams.set("start", String(Math.max(0, Math.trunc(start))));
   url.searchParams.set(
     "max_results",
     String(Math.max(1, Math.min(2000, Math.trunc(maxResults)))),

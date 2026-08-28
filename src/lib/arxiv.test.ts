@@ -96,4 +96,9 @@ describe("buildArxivQueryUrl", () => {
       expect(query).toContain(`cat:${category}`);
     }
   });
+
+  it("supports pagination for a later batch", () => {
+    const url = new URL(buildArxivQueryUrl(AI_CATEGORIES, 150, 150));
+    expect(url.searchParams.get("start")).toBe("150");
+  });
 });
