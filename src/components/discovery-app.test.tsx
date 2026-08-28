@@ -64,7 +64,9 @@ describe("DiscoveryApp", () => {
     expect(screen.getByRole("button", { name: "Saved papers, 1" })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Skip paper" }));
-    expect(screen.getByText("You’re all caught up")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: papers[0].title }),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Undo last choice" }));
     expect(
@@ -169,5 +171,19 @@ describe("DiscoveryApp", () => {
     expect(
       screen.queryByRole("heading", { name: papers[0].title }),
     ).not.toBeInTheDocument();
+  });
+
+  it("offers focus and timeframe controls at the bottom of mobile discovery", async () => {
+    const user = userEvent.setup();
+    render(<DiscoveryApp generatedAt="2026-08-27T12:00:00Z" papers={papers} />);
+
+    expect(screen.getByRole("button", { name: /Focus/ })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Any time/ }));
+
+    expect(screen.getByRole("radio", { name: "Past 30 days" })).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "Past 30 days" }));
+    await user.click(screen.getByRole("button", { name: "Done" }));
+
+    expect(screen.getByRole("button", { name: /30 days/ })).toBeInTheDocument();
   });
 });

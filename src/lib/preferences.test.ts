@@ -7,6 +7,7 @@ import {
   createInitialPreferences,
   getDecisionIds,
   undoLastDecision,
+  updateMaxAgeDays,
 } from "@/lib/preferences";
 
 function paper(
@@ -92,6 +93,34 @@ describe("paper preferences", () => {
       preferences,
     );
 
-    expect(deck.map((item) => item.id)).toEqual(["language-2", "vision"]);
+    expect(deck.map((item) => item.id)).toEqual([
+      "language-2",
+      "vision",
+      "language",
+    ]);
+  });
+
+  it("cycles the oldest seen paper after every eligible paper has been seen", () => {
+    const first = paper("first", "cs.AI", "2026-08-27");
+    const second = paper("second", "cs.AI", "2026-08-26");
+    let preferences = createInitialPreferences(["cs.AI"]);
+    preferences = applyDecision(preferences, first, "skipped");
+    preferences = applyDecision(preferences, second, "skipped");
+
+    expect(buildDeck([first, second], preferences)[0].id).toBe("first");
+
+    preferences = applyDecision(preferences, first, "skipped");
+    expect(buildDeck([first, second], preferences)[0].id).toBe("second");
+  });
+
+  it("filters the continuous deck by publication timeframe", () => {
+    const recent = paper("recent", "cs.AI", "2026-08-20");
+    const old = paper("old", "cs.AI", "2025-01-01");
+    const preferences = updateMaxAgeDays(createInitialPreferences(), 30);
+
+    expect(
+      buildDeck([old, recent], preferences, new Date("2026-08-27T00:00:00Z"))
+        .map((item) => item.id),
+    ).toEqual(["recent"]);
   });
 });
