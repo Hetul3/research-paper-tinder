@@ -6,10 +6,20 @@ import { useEffect } from "react";
 import { AI_CATEGORIES } from "@/lib/arxiv";
 
 interface TopicFilterProps {
+  maxAgeDays: number | null;
   onChange: (categories: string[]) => void;
   onClose: () => void;
+  onMaxAgeDaysChange: (maxAgeDays: number | null) => void;
   selectedCategories: string[];
 }
+
+const TIMEFRAMES = [
+  { label: "Any time", value: null },
+  { label: "Past 7 days", value: 7 },
+  { label: "Past 30 days", value: 30 },
+  { label: "Past 90 days", value: 90 },
+  { label: "Past year", value: 365 },
+] as const;
 
 const TOPIC_LABELS: Record<(typeof AI_CATEGORIES)[number], string> = {
   "cs.AI": "Artificial intelligence",
@@ -23,8 +33,10 @@ const TOPIC_LABELS: Record<(typeof AI_CATEGORIES)[number], string> = {
 };
 
 export function TopicFilter({
+  maxAgeDays,
   onChange,
   onClose,
+  onMaxAgeDaysChange,
   selectedCategories,
 }: TopicFilterProps) {
   useEffect(() => {
@@ -56,7 +68,7 @@ export function TopicFilter({
       <section
         aria-labelledby="topic-filter-heading"
         aria-modal="true"
-        className="w-full max-w-lg rounded-t-[2rem] border border-white/10 bg-[#1a211e] p-6 shadow-2xl sm:rounded-[2rem] sm:p-8"
+        className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-[2rem] border border-white/10 bg-[#1a211e] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-2xl sm:rounded-[2rem] sm:p-8"
         role="dialog"
       >
         <div className="flex items-start justify-between gap-6">
@@ -124,6 +136,38 @@ export function TopicFilter({
             );
           })}
         </div>
+
+        <fieldset className="mt-7 border-t border-white/10 pt-6">
+          <legend className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-white/45">
+            Publication timeframe
+          </legend>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {TIMEFRAMES.map((timeframe) => {
+              const checked = maxAgeDays === timeframe.value;
+
+              return (
+                <label
+                  className={`cursor-pointer rounded-full border px-4 py-2.5 text-xs font-semibold transition ${
+                    checked
+                      ? "border-[#e56b47] bg-[#e56b47] text-white"
+                      : "border-white/10 bg-white/[0.025] text-white/45 hover:text-white"
+                  }`}
+                  key={timeframe.label}
+                >
+                  <input
+                    aria-label={timeframe.label}
+                    checked={checked}
+                    className="sr-only"
+                    name="timeframe"
+                    onChange={() => onMaxAgeDaysChange(timeframe.value)}
+                    type="radio"
+                  />
+                  {timeframe.label}
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
 
         <div className="mt-7 flex items-center justify-between gap-4">
           <button

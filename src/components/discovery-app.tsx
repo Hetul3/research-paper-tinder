@@ -3,6 +3,7 @@
 import {
   Bookmark,
   Compass,
+  FileText,
   RotateCcw,
   Settings2,
   X,
@@ -20,6 +21,7 @@ import {
   getDecisionIds,
   parseStoredPreferences,
   undoLastDecision,
+  updateMaxAgeDays,
   updateSelectedCategories,
   type PaperDecisionKind,
   type Preferences,
@@ -46,6 +48,12 @@ function formatRefreshDate(value: string): string {
     day: "numeric",
     timeZone: "UTC",
   }).format(date)}`;
+}
+
+function timeframeLabel(maxAgeDays: number | null): string {
+  if (maxAgeDays === null) return "Any time";
+  if (maxAgeDays === 365) return "Past year";
+  return `Past ${maxAgeDays} days`;
 }
 
 export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
@@ -99,6 +107,12 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
     setPreferences((current) => undoLastDecision(current));
   }
 
+  function openPdfAndAdvance() {
+    if (!currentPaper) return;
+    window.open(currentPaper.pdfUrl, "_blank", "noopener,noreferrer");
+    setPreferences((current) => applyDecision(current, currentPaper, "read"));
+  }
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (view !== "discover" || !currentPaper) return;
@@ -130,7 +144,7 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
     <div className="relative min-h-dvh overflow-hidden bg-[#121715] text-[#f5efe5]">
       <div aria-hidden="true" className="ambient-glow pointer-events-none fixed inset-0" />
 
-      <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-10">
+      <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between px-3 py-3 sm:px-8 sm:py-5 lg:px-10">
         <button
           aria-label="Open Discover"
           className="group inline-flex items-center gap-3 text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e56b47]"
@@ -194,7 +208,7 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto w-full max-w-7xl px-5 pb-10 sm:px-8 lg:px-10">
+      <main className="relative z-10 mx-auto w-full max-w-7xl px-3 pb-4 sm:px-8 sm:pb-10 lg:px-10">
         {view === "discover" ? (
           <div className="grid items-center gap-8 lg:grid-cols-[minmax(15rem,0.7fr)_minmax(22rem,31rem)_minmax(15rem,0.7fr)] lg:gap-10">
             <aside className="hidden lg:block">
@@ -207,8 +221,8 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
                 without the noise.
               </h2>
               <p className="mt-6 max-w-xs text-sm leading-6 text-white/45">
-                A finite stack of new AI research. Keep what pulls you in, leave
-                the rest, and stop when you’re done.
+                A living stream of AI research. Keep what pulls you in, leave the
+                rest, and stop whenever you’re done.
               </p>
 
               <div className="mt-9 max-w-xs">
@@ -230,8 +244,9 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
             <section aria-label="Paper discovery" className="mx-auto w-full max-w-[31rem]">
               {currentPaper ? (
                 <PaperCard
-                  key={currentPaper.id}
+                  key={`${currentPaper.id}-${visiblePreferences.decisions.length}`}
                   onDecision={decide}
+                  onRightSwipe={openPdfAndAdvance}
                   paper={currentPaper}
                 />
               ) : (
@@ -241,11 +256,11 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
                       <Compass aria-hidden="true" size={23} />
                     </span>
                     <h1 className="mt-5 font-serif text-4xl font-semibold tracking-[-0.04em]">
-                      You’re all caught up
+                      Nothing in this filter yet
                     </h1>
                     <p className="mt-3 text-sm leading-6 text-white/50">
-                      That’s the end of this stack. The point is to finish—not to
-                      scroll forever.
+                      There are no papers matching these filters yet. Broaden your
+                      focus or timeframe to keep exploring.
                     </p>
                     {visiblePreferences.decisions.length > 0 ? (
                       <button
@@ -263,7 +278,7 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
               )}
 
               {currentPaper ? (
-                <div className="mt-5 flex items-center justify-center gap-3">
+                <div className="mt-3 hidden items-center justify-center gap-3 sm:mt-5 lg:flex">
                   <button
                     aria-label="Skip paper"
                     className="grid size-13 place-items-center rounded-full border border-white/15 bg-white/[0.045] text-white/70 transition hover:scale-105 hover:border-white/30 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e56b47] motion-reduce:hover:scale-100"
@@ -291,6 +306,51 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
                   </button>
                 </div>
               ) : null}
+
+              {view === "discover" ? (
+                <div className="mt-3 grid grid-cols-[auto_1fr_1fr_auto_auto] gap-2 lg:hidden">
+                  <button
+                    aria-label="Skip this paper"
+                    className="grid min-h-11 min-w-11 place-items-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/70"
+                    onClick={() => decide("skipped")}
+                    type="button"
+                  >
+                    <X aria-hidden="true" size={18} />
+                  </button>
+                  <button
+                    aria-label={`Focus, ${visiblePreferences.selectedCategories.length} topics`}
+                    className="min-h-11 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-xs font-semibold text-white/65"
+                    onClick={() => setTopicFilterOpen(true)}
+                    type="button"
+                  >
+                    Focus
+                  </button>
+                  <button
+                    aria-label={`Timeframe, ${timeframeLabel(visiblePreferences.maxAgeDays)}`}
+                    className="min-h-11 rounded-2xl border border-white/10 bg-white/[0.04] px-3 text-xs font-semibold text-white/65"
+                    onClick={() => setTopicFilterOpen(true)}
+                    type="button"
+                  >
+                    {timeframeLabel(visiblePreferences.maxAgeDays)}
+                  </button>
+                  <button
+                    aria-label="Save paper for later"
+                    className="grid min-h-11 min-w-11 place-items-center rounded-2xl border border-[#e56b47]/45 bg-[#e56b47]/10 text-[#f5a38b]"
+                    onClick={() => decide("saved")}
+                    type="button"
+                  >
+                    <Bookmark aria-hidden="true" size={18} />
+                  </button>
+                  <button
+                    aria-label="Open paper PDF"
+                    className="grid min-h-11 min-w-11 place-items-center rounded-2xl bg-[#e56b47] text-white"
+                    onClick={openPdfAndAdvance}
+                    type="button"
+                  >
+                    <FileText aria-hidden="true" size={18} />
+                  </button>
+                </div>
+              ) : null}
             </section>
 
             <aside className="hidden lg:block lg:pl-4">
@@ -315,7 +375,7 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
                 <p className="mt-8 font-mono text-[0.62rem] uppercase leading-5 tracking-[0.13em] text-white/25">
                   {formatRefreshDate(generatedAt)}
                   <br />
-                  New papers arrive daily
+                  New papers arrive daily · the stream keeps going
                 </p>
                 <p className="mt-6 inline-flex items-center gap-2 text-xs font-semibold text-white/35">
                   <Settings2 aria-hidden="true" size={15} />
@@ -331,8 +391,8 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
         )}
       </main>
 
-      <footer className="relative z-10 mx-auto flex w-full max-w-7xl flex-col gap-2 border-t border-white/[0.07] px-5 py-5 font-mono text-[0.58rem] uppercase tracking-[0.12em] text-white/25 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
-        <span>A finite feed for infinite questions.</span>
+      <footer className="relative z-10 mx-auto hidden w-full max-w-7xl flex-col gap-2 border-t border-white/[0.07] px-5 py-5 font-mono text-[0.58rem] uppercase tracking-[0.12em] text-white/25 sm:flex sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
+        <span>A calmer feed for infinite questions.</span>
         <span>Thank you to arXiv for use of its open access interoperability.</span>
       </footer>
 
@@ -344,6 +404,10 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
             )
           }
           onClose={() => setTopicFilterOpen(false)}
+          maxAgeDays={visiblePreferences.maxAgeDays}
+          onMaxAgeDaysChange={(maxAgeDays) =>
+            setPreferences((current) => updateMaxAgeDays(current, maxAgeDays))
+          }
           selectedCategories={visiblePreferences.selectedCategories}
         />
       ) : null}

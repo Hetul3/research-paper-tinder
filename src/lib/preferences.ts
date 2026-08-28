@@ -13,6 +13,7 @@ export interface PaperDecision {
 export interface Preferences {
   version: 1;
   selectedCategories: string[];
+  maxAgeDays: number | null;
   decisions: PaperDecision[];
   savedPapers: Paper[];
 }
@@ -23,6 +24,7 @@ export function createInitialPreferences(
   return {
     version: 1,
     selectedCategories: [...selectedCategories],
+    maxAgeDays: null,
     decisions: [],
     savedPapers: [],
   };
@@ -98,16 +100,39 @@ function affinityScore(paper: Paper, preferences: Preferences): number {
 export function buildDeck(
   papers: readonly Paper[],
   preferences: Preferences,
+  referenceDate = new Date(),
 ): Paper[] {
-  const decidedIds = new Set(
-    preferences.decisions.map((decision) => decision.paperId),
-  );
   const selected = new Set(preferences.selectedCategories);
+  const decisionOrder = new Map(
+    preferences.decisions.map((decision, index) => [decision.paperId, index]),
+  );
+  const cutoff = preferences.maxAgeDays
+    ? referenceDate.getTime() - preferences.maxAgeDays * 24 * 60 * 60 * 1000
+    : null;
 
   return papers
-    .filter((paper) => !decidedIds.has(paper.id))
     .filter((paper) => paper.categories.some((category) => selected.has(category)))
+    .filter(
+      (paper) =>
+        cutoff === null || new Date(paper.publishedAt).getTime() >= cutoff,
+    )
     .sort((left, right) => {
+      const leftDecisionOrder = decisionOrder.get(left.id);
+      const rightDecisionOrder = decisionOrder.get(right.id);
+
+      if (leftDecisionOrder === undefined && rightDecisionOrder !== undefined) {
+        return -1;
+      }
+      if (leftDecisionOrder !== undefined && rightDecisionOrder === undefined) {
+        return 1;
+      }
+      if (
+        leftDecisionOrder !== undefined &&
+        rightDecisionOrder !== undefined
+      ) {
+        return leftDecisionOrder - rightDecisionOrder;
+      }
+
       const affinityDifference =
         affinityScore(right, preferences) - affinityScore(left, preferences);
 
@@ -118,6 +143,19 @@ export function buildDeck(
         new Date(left.publishedAt).getTime()
       );
     });
+}
+
+export function updateMaxAgeDays(
+  preferences: Preferences,
+  maxAgeDays: number | null,
+): Preferences {
+  return {
+    ...preferences,
+    maxAgeDays:
+      maxAgeDays === null
+        ? null
+        : Math.max(1, Math.min(3650, Math.trunc(maxAgeDays))),
+  };
 }
 
 export function updateSelectedCategories(
@@ -165,6 +203,10 @@ export function parseStoredPreferences(value: string | null): Preferences {
         selectedCategories.length > 0
           ? selectedCategories
           : [...AI_CATEGORIES],
+      maxAgeDays:
+        typeof parsed.maxAgeDays === "number" && parsed.maxAgeDays > 0
+          ? Math.min(3650, Math.trunc(parsed.maxAgeDays))
+          : null,
       decisions,
       savedPapers,
     };

@@ -14,6 +14,7 @@ import type { Paper } from "@/lib/arxiv";
 interface PaperCardProps {
   paper: Paper;
   onDecision: (decision: "saved" | "skipped") => void;
+  onRightSwipe?: () => void;
 }
 
 function abstractExcerpt(abstract: string): string {
@@ -36,23 +37,28 @@ function formatDate(value: string): string {
   }).format(date);
 }
 
-export function PaperCard({ paper, onDecision }: PaperCardProps) {
+export function PaperCard({ paper, onDecision, onRightSwipe }: PaperCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const startX = useRef<number | null>(null);
+  const dragXRef = useRef(0);
   const excerpt = useMemo(() => abstractExcerpt(paper.abstract), [paper.abstract]);
 
   function handlePointerDown(event: PointerEvent<HTMLElement>) {
     if (expanded) return;
+    if ((event.target as HTMLElement).closest("button, a")) return;
     startX.current = event.clientX;
+    dragXRef.current = 0;
     setDragging(true);
     event.currentTarget.setPointerCapture?.(event.pointerId);
   }
 
   function handlePointerMove(event: PointerEvent<HTMLElement>) {
     if (startX.current === null || expanded) return;
-    setDragX(event.clientX - startX.current);
+    const nextDragX = event.clientX - startX.current;
+    dragXRef.current = nextDragX;
+    setDragX(nextDragX);
   }
 
   function handlePointerUp() {
@@ -60,15 +66,20 @@ export function PaperCard({ paper, onDecision }: PaperCardProps) {
     startX.current = null;
     setDragging(false);
 
-    if (dragX > 100) onDecision("saved");
-    else if (dragX < -100) onDecision("skipped");
+    if (dragXRef.current > 100) {
+      if (onRightSwipe) onRightSwipe();
+      else onDecision("saved");
+    } else if (dragXRef.current < -100) {
+      onDecision("skipped");
+    }
 
+    dragXRef.current = 0;
     setDragX(0);
   }
 
   return (
     <article
-      className="paper-card relative isolate flex min-h-[31rem] w-full flex-col overflow-hidden rounded-[2rem] border border-white/70 bg-[#f2eadc] p-6 text-[#171713] shadow-[0_28px_80px_rgba(0,0,0,0.38)] sm:min-h-[35rem] sm:p-8"
+      className="paper-card relative isolate flex h-[calc(100dvh-10.75rem)] min-h-[30rem] w-full select-none touch-pan-y flex-col overflow-hidden rounded-[1.55rem] border border-white/70 bg-[#f2eadc] p-5 text-[#171713] shadow-[0_28px_80px_rgba(0,0,0,0.38)] cursor-grab active:cursor-grabbing sm:h-auto sm:min-h-[35rem] sm:select-auto sm:rounded-[2rem] sm:p-8"
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
