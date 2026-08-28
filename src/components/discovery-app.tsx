@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { PaperCard } from "@/components/paper-card";
 import { SavedLibrary } from "@/components/saved-library";
+import { TopicFilter } from "@/components/topic-filter";
 import type { Paper } from "@/lib/arxiv";
 import {
   applyDecision,
@@ -19,6 +20,7 @@ import {
   getDecisionIds,
   parseStoredPreferences,
   undoLastDecision,
+  updateSelectedCategories,
   type PaperDecisionKind,
   type Preferences,
 } from "@/lib/preferences";
@@ -53,6 +55,7 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
       : parseStoredPreferences(window.localStorage.getItem(STORAGE_KEY)),
   );
   const [view, setView] = useState<"discover" | "saved">("discover");
+  const [topicFilterOpen, setTopicFilterOpen] = useState(false);
   const hydrated = useSyncExternalStore(
     subscribeToHydration,
     () => true,
@@ -139,7 +142,8 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
           </span>
         </button>
 
-        <nav aria-label="Primary" className="flex items-center gap-1 rounded-full border border-white/10 bg-black/15 p-1">
+        <div className="flex items-center gap-2">
+          <nav aria-label="Primary" className="flex items-center gap-1 rounded-full border border-white/10 bg-black/15 p-1">
           <button
             aria-current={view === "discover" ? "page" : undefined}
             className={`inline-flex min-h-10 items-center gap-2 rounded-full px-3.5 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-[#e56b47] sm:px-4 ${
@@ -170,7 +174,16 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
               {savedPapers.length}
             </span>
           </button>
-        </nav>
+          </nav>
+          <button
+            aria-label="Tune topics"
+            className="grid size-10 place-items-center rounded-full border border-white/10 bg-white/[0.035] text-white/45 transition hover:border-white/20 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e56b47]"
+            onClick={() => setTopicFilterOpen(true)}
+            type="button"
+          >
+            <Settings2 aria-hidden="true" size={16} />
+          </button>
+        </div>
       </header>
 
       <main className="relative z-10 mx-auto w-full max-w-7xl px-5 pb-10 sm:px-8 lg:px-10">
@@ -296,13 +309,10 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
                   <br />
                   New papers arrive daily
                 </p>
-                <button
-                  className="mt-6 inline-flex min-h-10 items-center gap-2 text-xs font-semibold text-white/35 transition hover:text-white/70 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#e56b47]"
-                  type="button"
-                >
+                <p className="mt-6 inline-flex items-center gap-2 text-xs font-semibold text-white/35">
                   <Settings2 aria-hidden="true" size={15} />
-                  Tune your topics
-                </button>
+                  {visiblePreferences.selectedCategories.length} topics selected
+                </p>
               </div>
             </aside>
           </div>
@@ -317,6 +327,18 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
         <span>A finite feed for infinite questions.</span>
         <span>Thank you to arXiv for use of its open access interoperability.</span>
       </footer>
+
+      {topicFilterOpen ? (
+        <TopicFilter
+          onChange={(categories) =>
+            setPreferences((current) =>
+              updateSelectedCategories(current, categories),
+            )
+          }
+          onClose={() => setTopicFilterOpen(false)}
+          selectedCategories={visiblePreferences.selectedCategories}
+        />
+      ) : null}
     </div>
   );
 }
