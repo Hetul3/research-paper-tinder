@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "refresh:bundle": "node --experimental-strip-types scripts/update-bundled-snapshot.mts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
