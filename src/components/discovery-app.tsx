@@ -256,11 +256,11 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
                       <Compass aria-hidden="true" size={23} />
                     </span>
                     <h1 className="mt-5 font-serif text-4xl font-semibold tracking-[-0.04em]">
-                      Nothing in this filter yet
+                      You’re caught up for now
                     </h1>
                     <p className="mt-3 text-sm leading-6 text-white/50">
-                      There are no papers matching these filters yet. Broaden your
-                      focus or timeframe to keep exploring.
+                      No repeats here. New papers arrive with the next daily
+                      refresh, or broaden your focus and timeframe to continue.
                     </p>
                     {visiblePreferences.decisions.length > 0 ? (
                       <button
@@ -375,7 +375,7 @@ export function DiscoveryApp({ generatedAt, papers }: DiscoveryAppProps) {
                 <p className="mt-8 font-mono text-[0.62rem] uppercase leading-5 tracking-[0.13em] text-white/25">
                   {formatRefreshDate(generatedAt)}
                   <br />
-                  New papers arrive daily · the stream keeps going
+                  New papers arrive daily · no repeats in this batch
                 </p>
                 <p className="mt-6 inline-flex items-center gap-2 text-xs font-semibold text-white/35">
                   <Settings2 aria-hidden="true" size={15} />

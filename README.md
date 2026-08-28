@@ -1,6 +1,6 @@
 # margin
 
-A quiet, mobile-first way to discover AI research. Read one author abstract at a time, save what sparks your curiosity, skip what does not, and reach a real end instead of an infinite feed.
+A quiet, mobile-first way to discover AI research. Read one author abstract at a time, save what sparks your curiosity, skip what does not, and reach a real end to today's batch instead of an infinite recycled feed.
 
 The MVP is intentionally free and accountless:
 
