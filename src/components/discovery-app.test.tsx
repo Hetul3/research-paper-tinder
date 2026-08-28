@@ -65,7 +65,7 @@ describe("DiscoveryApp", () => {
 
     await user.click(screen.getByRole("button", { name: "Skip paper" }));
     expect(
-      screen.getByRole("heading", { name: papers[0].title }),
+      screen.getByRole("heading", { name: "Nothing in this filter yet" }),
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Undo last choice" }));

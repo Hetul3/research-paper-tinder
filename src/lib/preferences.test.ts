@@ -93,11 +93,7 @@ describe("paper preferences", () => {
       preferences,
     );
 
-    expect(deck.map((item) => item.id)).toEqual([
-      "language-2",
-      "vision",
-      "language",
-    ]);
+    expect(deck.map((item) => item.id)).toEqual(["language-2", "vision"]);
   });
 
   it("stops at the end of a batch instead of recycling seen papers", () => {

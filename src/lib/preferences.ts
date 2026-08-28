@@ -103,36 +103,21 @@ export function buildDeck(
   referenceDate = new Date(),
 ): Paper[] {
   const selected = new Set(preferences.selectedCategories);
-  const decisionOrder = new Map(
-    preferences.decisions.map((decision, index) => [decision.paperId, index]),
+  const decidedIds = new Set(
+    preferences.decisions.map((decision) => decision.paperId),
   );
   const cutoff = preferences.maxAgeDays
     ? referenceDate.getTime() - preferences.maxAgeDays * 24 * 60 * 60 * 1000
     : null;
 
   return papers
+    .filter((paper) => !decidedIds.has(paper.id))
     .filter((paper) => paper.categories.some((category) => selected.has(category)))
     .filter(
       (paper) =>
         cutoff === null || new Date(paper.publishedAt).getTime() >= cutoff,
     )
     .sort((left, right) => {
-      const leftDecisionOrder = decisionOrder.get(left.id);
-      const rightDecisionOrder = decisionOrder.get(right.id);
-
-      if (leftDecisionOrder === undefined && rightDecisionOrder !== undefined) {
-        return -1;
-      }
-      if (leftDecisionOrder !== undefined && rightDecisionOrder === undefined) {
-        return 1;
-      }
-      if (
-        leftDecisionOrder !== undefined &&
-        rightDecisionOrder !== undefined
-      ) {
-        return leftDecisionOrder - rightDecisionOrder;
-      }
-
       const affinityDifference =
         affinityScore(right, preferences) - affinityScore(left, preferences);
 
