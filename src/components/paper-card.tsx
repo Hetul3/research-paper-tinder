@@ -46,7 +46,6 @@ export function PaperCard({ paper, onDecision, onRightSwipe }: PaperCardProps) {
   const excerpt = useMemo(() => abstractExcerpt(paper.abstract), [paper.abstract]);
 
   function handlePointerDown(event: PointerEvent<HTMLElement>) {
-    if (expanded) return;
     if ((event.target as HTMLElement).closest("button, a")) return;
     startX.current = event.clientX;
     dragXRef.current = 0;
@@ -55,7 +54,7 @@ export function PaperCard({ paper, onDecision, onRightSwipe }: PaperCardProps) {
   }
 
   function handlePointerMove(event: PointerEvent<HTMLElement>) {
-    if (startX.current === null || expanded) return;
+    if (startX.current === null) return;
     const nextDragX = event.clientX - startX.current;
     dragXRef.current = nextDragX;
     setDragX(nextDragX);
@@ -87,7 +86,7 @@ export function PaperCard({ paper, onDecision, onRightSwipe }: PaperCardProps) {
       style={{
         transform: `translateX(${dragX}px) rotate(${dragX / 28}deg)`,
         transition: dragging ? "none" : "transform 220ms ease",
-        touchAction: expanded ? "auto" : "pan-y",
+        touchAction: "pan-y",
       }}
     >
       <div aria-hidden="true" className="paper-grid absolute inset-0 -z-10 opacity-40" />
@@ -124,7 +123,7 @@ export function PaperCard({ paper, onDecision, onRightSwipe }: PaperCardProps) {
         </span>
       </header>
 
-      <div className="mt-8 flex-1">
+      <div className="mt-8 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-[#d45532]">
           New research
         </p>
@@ -166,7 +165,7 @@ export function PaperCard({ paper, onDecision, onRightSwipe }: PaperCardProps) {
         ) : null}
       </div>
 
-      <footer className="mt-6 flex items-end justify-between gap-4">
+      <footer className="mt-4 flex shrink-0 items-end justify-between gap-4 border-t border-[#171713]/10 pt-4 sm:mt-6 sm:border-0 sm:pt-0">
         <button
           aria-expanded={expanded}
           className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[#171713]/20 px-4 py-2 text-sm font-semibold transition hover:bg-[#171713]/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#171713]"

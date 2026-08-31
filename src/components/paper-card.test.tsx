@@ -23,6 +23,21 @@ const paper: Paper = {
 };
 
 describe("PaperCard gestures", () => {
+  it("keeps the close control visible and allows swiping while the abstract is expanded", () => {
+    const onDecision = vi.fn();
+    const longPaper = { ...paper, abstract: `${paper.abstract} `.repeat(80) };
+    render(<PaperCard onDecision={onDecision} paper={longPaper} />);
+    const card = screen.getByRole("article");
+
+    fireEvent.click(screen.getByRole("button", { name: "Read full abstract" }));
+    expect(screen.getByRole("button", { name: "Close abstract" })).toBeInTheDocument();
+
+    fireEvent.pointerDown(card, { clientX: 260, pointerId: 3 });
+    fireEvent.pointerMove(card, { clientX: 90, pointerId: 3 });
+    fireEvent.pointerUp(card, { clientX: 90, pointerId: 3 });
+    expect(onDecision).toHaveBeenCalledWith("skipped");
+  });
+
   it("follows a finger and skips after crossing the left threshold", () => {
     const onDecision = vi.fn();
     render(<PaperCard onDecision={onDecision} paper={paper} />);
