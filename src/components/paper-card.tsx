@@ -41,9 +41,32 @@ export function PaperCard({ paper, onDecision, onRightSwipe }: PaperCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const startX = useRef<number | null>(null);
   const dragXRef = useRef(0);
   const excerpt = useMemo(() => abstractExcerpt(paper.abstract), [paper.abstract]);
+
+  async function summarize() {
+    if (summaryLoading) return;
+    setSummaryLoading(true);
+    setSummaryError(null);
+    try {
+      const response = await fetch("/api/summarize", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ paperId: paper.id, abstract: paper.abstract }),
+      });
+      const result = (await response.json()) as { summary?: string; error?: string };
+      if (!response.ok || !result.summary) throw new Error(result.error || "Unable to summarize this paper.");
+      setSummary(result.summary);
+    } catch (error) {
+      setSummaryError(error instanceof Error ? error.message : "Unable to summarize this paper.");
+    } finally {
+      setSummaryLoading(false);
+    }
+  }
 
   function handlePointerDown(event: PointerEvent<HTMLElement>) {
     if ((event.target as HTMLElement).closest("button, a")) return;
@@ -139,6 +162,25 @@ export function PaperCard({ paper, onDecision, onRightSwipe }: PaperCardProps) {
         <p className="text-[0.98rem] leading-7 text-[#3f3c35]">
           {expanded ? paper.abstract : excerpt}
         </p>
+
+        <div className="mt-5">
+          <button
+            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#d45532]/40 bg-[#d45532]/10 px-4 py-2 text-sm font-semibold text-[#a63f25] transition hover:bg-[#d45532]/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#d45532] disabled:cursor-wait disabled:opacity-60"
+            disabled={summaryLoading}
+            onClick={summarize}
+            type="button"
+          >
+            <Sparkles aria-hidden="true" size={16} />
+            {summaryLoading ? "Summarizing…" : summary ? "Refresh summary" : "Summarize paper"}
+          </button>
+          {summary ? (
+            <div className="mt-4 rounded-2xl border border-[#d45532]/25 bg-[#d45532]/[0.08] p-4 text-sm leading-6 text-[#3f3c35]">
+              <p className="mb-2 font-mono text-[0.62rem] font-bold uppercase tracking-[0.16em] text-[#a63f25]">AI summary</p>
+              <p className="whitespace-pre-wrap">{summary}</p>
+              <p className="mt-3 text-xs leading-5 text-[#6d695f]">Generated from the author abstract; verify details in the paper.</p>
+            </div>
+          ) : summaryError ? <p className="mt-2 text-xs leading-5 text-[#a63f25]">{summaryError}</p> : null}
+        </div>
 
         {expanded ? (
           <div className="mt-6 flex flex-wrap gap-3">
