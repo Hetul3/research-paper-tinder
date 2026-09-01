@@ -2,13 +2,7 @@ import { NextResponse } from "next/server";
 
 const MODEL = "gemini-2.5-flash-lite";
 const MAX_ABSTRACT_LENGTH = 40_000;
-const DAILY_LIMIT_PER_IP = 10;
 const cache = new Map<string, string>();
-const usage = new Map<string, { day: string; count: number }>();
-
-function clientKey(request: Request): string {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "anonymous";
-}
 
 function prompt(abstract: string): string {
   return [
@@ -37,13 +31,6 @@ export async function POST(request: Request) {
   const cached = cache.get(body.paperId);
   if (cached) return NextResponse.json({ summary: cached, cached: true });
 
-  const today = new Date().toISOString().slice(0, 10);
-  const key = clientKey(request);
-  const current = usage.get(key);
-  if (current?.day === today && current.count >= DAILY_LIMIT_PER_IP) {
-    return NextResponse.json({ error: "Daily summary limit reached. Try again tomorrow." }, { status: 429 });
-  }
-
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
     {
@@ -52,11 +39,16 @@ export async function POST(request: Request) {
       body: JSON.stringify({ contents: [{ parts: [{ text: prompt(body.abstract) }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 350 } }),
     },
   );
+  if (response.status === 429) {
+    return NextResponse.json(
+      { error: "Gemini's rate limit has been reached. Please wait a little and try again." },
+      { status: 429, headers: response.headers.get("retry-after") ? { "retry-after": response.headers.get("retry-after")! } : undefined },
+    );
+  }
   if (!response.ok) return NextResponse.json({ error: "The summary service is temporarily unavailable." }, { status: 502 });
   const result = (await response.json()) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
   const summary = result.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("").trim();
   if (!summary) return NextResponse.json({ error: "The summary service returned no text." }, { status: 502 });
   cache.set(body.paperId, summary);
-  usage.set(key, { day: today, count: (current?.day === today ? current.count : 0) + 1 });
   return NextResponse.json({ summary, cached: false });
 }

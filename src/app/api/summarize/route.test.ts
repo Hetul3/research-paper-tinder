@@ -33,4 +33,13 @@ describe("POST /api/summarize", () => {
     expect(second.status).toBe(200);
     expect(fetchMock).toHaveBeenCalledOnce();
   });
+
+  it("explains when Gemini asks us to wait", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "test-key");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("busy", { status: 429, headers: { "retry-after": "30" } }));
+    const response = await POST(request({ paperId: "rate-limited", abstract: "An abstract." }));
+    expect(response.status).toBe(429);
+    await expect(response.json()).resolves.toEqual({ error: "Gemini's rate limit has been reached. Please wait a little and try again." });
+    expect(response.headers.get("retry-after")).toBe("30");
+  });
 });
